@@ -205,7 +205,7 @@ inline std::string ExtractTags(const Tags& _tags)
 inline bool ValidateMetricName(const std::string& _name)
 {
     return
-        _name.length() > 1                   &&
+        _name.length() > 0                   &&
         _name.length() < 200                 &&
         std::isalnum(_name.at(0))            &&
         _name.find('|') == std::string::npos &&
