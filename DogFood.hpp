@@ -49,10 +49,10 @@
 //         E.G. - g++ (...) -DDOGSTATSD_PORT="255.255.255.255"
 //
 #ifndef DOGSTATSD_HOST
-	#define DOGSTATSD_HOST "127.0.0.1"
+    #define DOGSTATSD_HOST "127.0.0.1"
 #endif
 #ifndef DOGSTATSD_PORT
-	#define DOGSTATSD_PORT 8125
+    #define DOGSTATSD_PORT 8125
 #endif
 
 ////////////////////////////////////////////////////////////////
@@ -61,54 +61,54 @@
 //     Linux and Apple (POSIX-ish)
 //
 #if defined(__linux__) || defined(__APPLE__)
-	#include <arpa/inet.h>
-	#include <sys/socket.h>
-	#include <unistd.h>
-	#define UDP_SEND_DATAGRAM(data,length) do {\
-			struct sockaddr_in client;\
-			int fd=socket(AF_INET, SOCK_DGRAM, 0);\
-			if (fd==-1)return false;\
-			int size=static_cast<int>(sizeof(client));\
-			std::memset(&client,0,size);\
-			client.sin_family=AF_INET;\
-			client.sin_port=htons(DOGSTATSD_PORT);\
-			client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
-			struct sockaddr* addr= (struct sockaddr*)&client;\
-			if(sendto(fd,data,length,0,addr,size)==-1)\
-			{close(fd);return false;}close(fd);\
-		} while (0)
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+    #include <unistd.h>
+    #define UDP_SEND_DATAGRAM(data,length) do {\
+            struct sockaddr_in client;\
+            int fd=socket(AF_INET, SOCK_DGRAM, 0);\
+            if (fd==-1)return false;\
+            int size=static_cast<int>(sizeof(client));\
+            std::memset(&client,0,size);\
+            client.sin_family=AF_INET;\
+            client.sin_port=htons(DOGSTATSD_PORT);\
+            client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
+            struct sockaddr* addr= (struct sockaddr*)&client;\
+            if(sendto(fd,data,length,0,addr,size)==-1)\
+            {close(fd);return false;}close(fd);\
+        } while (0)
 
-	#define _DOGFOOD_NOEXCEPT noexcept
+    #define _DOGFOOD_NOEXCEPT noexcept
 
 //
 //     Microsoft Windows
 //
 #elif defined(_MSC_VER)
-	#include <WinSock2.h>
-	#pragma comment(lib, "Ws2_32.lib")
-	#pragma warning( disable : 4996 ) 
-	#define UDP_SEND_DATAGRAM(data,length) do {\
-			struct sockaddr_in client;\
-			SOCKET fd=socket(AF_INET, SOCK_DGRAM, 0);\
-			if (fd==INVALID_SOCKET)return false;\
-			int size=static_cast<int>(sizeof(client));\
-			std::memset(&client,0,size);\
-			client.sin_family= AF_INET;\
-			client.sin_port=htons(9236);\
-			client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
-			struct sockaddr* a=\
-			reinterpret_cast<struct sockaddr*>(&client);\
-			if(sendto(fd,reinterpret_cast<const char*>(data),\
-			static_cast<int>(length),0,a,size)==SOCKET_ERROR)\
-			{closesocket(fd);return false;}closesocket(fd);\
-		} while (0)
+    #include <WinSock2.h>
+    #pragma comment(lib, "Ws2_32.lib")
+    #pragma warning( disable : 4996 ) 
+    #define UDP_SEND_DATAGRAM(data,length) do {\
+            struct sockaddr_in client;\
+            SOCKET fd=socket(AF_INET, SOCK_DGRAM, 0);\
+            if (fd==INVALID_SOCKET)return false;\
+            int size=static_cast<int>(sizeof(client));\
+            std::memset(&client,0,size);\
+            client.sin_family= AF_INET;\
+            client.sin_port=htons(9236);\
+            client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
+            struct sockaddr* a=\
+            reinterpret_cast<struct sockaddr*>(&client);\
+            if(sendto(fd,reinterpret_cast<const char*>(data),\
+            static_cast<int>(length),0,a,size)==SOCKET_ERROR)\
+            {closesocket(fd);return false;}closesocket(fd);\
+        } while (0)
 
-	#define _DOGFOOD_NOEXCEPT
+    #define _DOGFOOD_NOEXCEPT
 #else
-	//
-	//     OS Unknown
-	//
-	#error "Well, sorry for your weird OS..."
+    //
+    //     OS Unknown
+    //
+    #error "Well, sorry for your weird OS..."
 #endif
 
 ////////////////////////////////////////////////////////////////
@@ -117,19 +117,18 @@
 //     UDP by default
 //
 #ifndef DOGFOOD_UNIT_TEST
-#define DOGFOOD_SEND_STDSTRING(string)                     \
+#define DOGFOOD_SEND_STDSTRING(string)\
         UDP_SEND_DATAGRAM(string.c_str(),string.length())
 //
 //     Mock to global variable for unit testing
 //
 #else
 static std::string _udp_send_mock;
-#define DOGFOOD_SEND_STDSTRING(string)                     \
-        do {                                                   \
-            _udp_send_mock.clear();                            \
-            _udp_send_mock.append(string);                     \
-            std::printf("%s\n",string.c_str());                \
-		        } while (0)
+#define DOGFOOD_SEND_STDSTRING(string) do {\
+            _udp_send_mock.clear();\
+            _udp_send_mock.append(string);\
+            std::printf("%s\n",string.c_str());\
+        } while (0)
 #endif
 
 namespace DogFood {
@@ -358,7 +357,7 @@ inline bool ValidatePayloadSize(const std::string& _payload)
 //
 template <typename Numeric>
 typename std::enable_if<
-    std::is_integral<Numeric>::value      ||
+    std::is_integral<Numeric>::value ||
     std::is_floating_point<Numeric>::value,
 bool>::type
 Metric
@@ -530,7 +529,7 @@ enum class Alert { Info, Success, Warning, Error };
 //
 template <typename Numeric>
 typename std::enable_if<
-    std::is_integral<Numeric>::value      ||
+    std::is_integral<Numeric>::value ||
     std::is_floating_point<Numeric>::value,
 bool>::type
 Event
@@ -561,9 +560,9 @@ _DOGFOOD_NOEXCEPT
     //     `_e{title.length,text.length}:title|text|`
     //
     datagram
-		+= "_e{" + std::to_string(_title.length()) +
-		     "," + std::to_string(_etext.length()) +
-		    "}:" + _title + "|" + _etext;
+        += "_e{" + std::to_string(_title.length()) +
+             "," + std::to_string(_etext.length()) +
+            "}:" + _title + "|" + _etext;
 
     ////////////////////////////////////////////////////////////
     // Add the timestamp to the datagram if present
@@ -696,7 +695,7 @@ enum class Status {
 //
 template <typename Numeric>
 typename std::enable_if<
-    std::is_integral<Numeric>::value      ||
+    std::is_integral<Numeric>::value ||
     std::is_floating_point<Numeric>::value,
 bool>::type
 ServiceCheck
@@ -770,10 +769,11 @@ _DOGFOOD_NOEXCEPT
 }
 
 } // namespace DogFood
-#endif // _DOGFOOD_DOGFOOD_H
 
 #if defined(_MSC_VER)
-	#pragma warning( default : 4996 ) 
+    #pragma warning( default : 4996 ) 
 #endif
+
+#endif // _DOGFOOD_DOGFOOD_H
 
 // Well, I guess that is the end. Until next time, folks!
