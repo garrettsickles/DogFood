@@ -36,7 +36,7 @@ void UnitTest::Setup() {
     // Invalid name characters
     AddTest("Metric Name", "Invalid characters", [](void) {
         std::string test_name = "Metric Name";
-        for (char c = 0; c < CHAR_MAX; c++) {
+        for (char c = 0; c < 127; c++) {
             test_name[6] = c;
             if (std::isalnum(c) || c == '_' || c == '.') {
                 std::string message = "Name containing ASCII '" + std::to_string(c) + "' should be valid";
@@ -51,7 +51,7 @@ void UnitTest::Setup() {
     // Invalid starting character
     AddTest("Metric Name", "Invalid characters", [](void) {
         std::string test_name = "MetricName";
-        for (char c = 0; c < CHAR_MAX; c++) {
+        for (char c = 0; c < 127; c++) {
             test_name[0] = c;
             if (std::isalpha(c)) {
                 std::string message = "Name beginning with ASCII '" + std::to_string(c) + "' should be valid";
