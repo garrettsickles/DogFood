@@ -203,13 +203,22 @@ inline std::string ExtractTags(const Tags& _tags)
 //
 inline bool ValidateMetricName(const std::string& _name)
 {
-    return
-        _name.length() > 0                   &&
-        _name.length() < 200                 &&
-        std::isalnum(_name.at(0))            &&
-        _name.find('|') == std::string::npos &&
-        _name.find(':') == std::string::npos &&
-        _name.find('@') == std::string::npos;
+#if defined(DOGFOOD_UNSAFE_NAMES)
+    return true;
+#else
+    if (_name.length() == 0 || _name.length() > 200)
+        return false;
+
+    for (size_t n = 0; n < _name.length(); n++) {
+        const char c = _name.at(n);
+        if (std::isalnum(c) || c == '_' || c == '.')
+            continue;
+        else
+            return false;
+    }
+
+    return std::isalpha(_name.at(0));
+#endif
 }
 
 ////////////////////////////////////////////////////////////////
@@ -265,7 +274,7 @@ inline std::string EscapeEventText(const std::string& _text)
     for (const char c : _text)
     {
         // Replace newline literals with '\\n'
-        if (c == '\n') buffer.append("\\\n");
+        if (c == '\n') buffer.append("\\n");
         else           buffer.push_back(c);
     }
 

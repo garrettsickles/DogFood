@@ -93,8 +93,8 @@ bool TypesafeEqual<const char*>(const char* a, const char* b) { return std::stri
 
 #define AssertFalse(arg,message) do {\
         std::string _pq_msg_tmp(message);\
-        if (static_cast<bool>(arg) == false) {\
-            _UNITTEST_P_RD("        - %s (%s:%d - AssertTrue)\n", _pq_msg_tmp.c_str(), __FILE__, __LINE__);\
+        if (static_cast<bool>(arg) == true) {\
+            _UNITTEST_P_RD("        - %s (%s:%d - AssertFalse)\n", _pq_msg_tmp.c_str(), __FILE__, __LINE__);\
             throw Failure(message,__FILE__,__LINE__);\
         } else {\
             _UNITTEST_P_GN("        - %s\n", _pq_msg_tmp.c_str());\
@@ -132,7 +132,7 @@ int main() {
     #endif
     std::size_t suite_number = 0;
     for (const auto& suite : UnitTest::_pq_test_suite) {
-        _UNITTEST_P_CN(">>> Test Suite: ")
+        _UNITTEST_P_CN("\n>>> Test Suite: ")
         _UNITTEST_P_GY("%s\n", suite.first.c_str());
         #ifdef UNITTEST_JSON_OUTPUT
             if (suite_number > 0) json_stream << ",";

@@ -6,7 +6,7 @@ CC_INC = -I..
 
 # File Extensions
 EXT_CPP  = cpp
-EXT_TEST = unit_test
+EXT_TEST = unittest
 
 # Directories
 DIR_TEST    = .
