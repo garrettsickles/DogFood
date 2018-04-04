@@ -2,7 +2,7 @@
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F78A011B-0EFD-4C18-8AE1-B41C00DD5C4E}</ProjectGuid>
-    <ProjectName>Example</ProjectName>
+    <ProjectName>SimpleExample</ProjectName>
     <RootNamespace>DogFood</RootNamespace>
   </PropertyGroup>
   <ImportGroup Label="PropertySheets">
@@ -13,7 +13,7 @@
     <ClInclude Include="..\..\DogFood.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\DogFood.example.cpp" />
+    <ClCompile Include="..\simple_example.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

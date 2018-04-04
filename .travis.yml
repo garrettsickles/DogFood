@@ -6,5 +6,8 @@ compiler:
   - g++
 
 script:
+  - cd test
+  - make test
+  - cd ..
   - cd example
   - make
