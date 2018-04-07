@@ -7,7 +7,8 @@ compiler:
 
 script:
   - cd test
+  - make clean
   - make test
-  - cd ..
-  - cd example
+  - cd ../example
+  - make clean
   - make
