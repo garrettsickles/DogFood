@@ -108,7 +108,7 @@
     //
     // Support for noexcept
     //
-    #if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 180021114
+    #if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
         #define _DOGFOOD_NOEXCEPT noexcept
     #else
         #define _DOGFOOD_NOEXCEPT
