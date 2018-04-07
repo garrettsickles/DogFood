@@ -5,10 +5,11 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 ////////////////////////////////////////////////////////////////
-// A simple unit test header
+//                 A simple unit test header                  //
 ////////////////////////////////////////////////////////////////
 
 #if defined(_MSC_VER)
@@ -76,10 +77,22 @@ void AddTest(const std::string suite, const std::string name, const Test& test, 
     { _pq_test_suite[suite].push_back(Case(name,test,use,duration)); }
 
 template <typename T>
-bool TypesafeEqual(T a, T b) { return a == b; }
+bool TypesafeEqual(const T& a, const T& b) { return a == b; }
 
 template <>
-bool TypesafeEqual<const char*>(const char* a, const char* b) { return std::string(a) == std::string(b); }
+bool TypesafeEqual<char*>(char* const& a, char* const& b) { return std::string(a) == std::string(b); }
+
+template <>
+bool TypesafeEqual<const char*>(const char* const& a, const char* const& b) { return std::string(a) == std::string(b); }
+
+template <typename T>
+std::string TypesafeToString(const T& t) { return std::to_string(t); }
+
+template <>
+std::string TypesafeToString<std::string>(const std::string& t) { return t; }
+
+template <>
+std::string TypesafeToString(const bool& t) { return std::string(t ? "true" : "false"); }
 
 #define AssertTrue(arg,message) do {\
         std::string _pq_msg_tmp(message);\
@@ -102,9 +115,12 @@ bool TypesafeEqual<const char*>(const char* a, const char* b) { return std::stri
     } while (0)
 
 #define AssertEqual(expected,actual,message) do {\
+        static_assert(std::is_same<decltype(expected), decltype(actual)>::value, "AssertEqual must compare same types");\
         std::string _pq_msg_tmp(message);\
         if (!TypesafeEqual(expected, actual)) {\
-            _UNITTEST_P_RD("        - %s (%s:%d - AssertEqual)\n", _pq_msg_tmp.c_str(), __FILE__, __LINE__);\
+            const std::string expstr = TypesafeToString(expected);\
+            const std::string actstr = TypesafeToString(actual);\
+            _UNITTEST_P_RD("        - %s (%s:%d - AssertEqual) (Expected: %s, Actual: %s)\n", _pq_msg_tmp.c_str(), __FILE__, __LINE__, expstr.c_str(), actstr.c_str());\
             throw Failure(message,__FILE__,__LINE__);\
         } else {\
             _UNITTEST_P_GN("        - %s\n", _pq_msg_tmp.c_str());\

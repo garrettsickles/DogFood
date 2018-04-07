@@ -1,6 +1,8 @@
 #ifndef _DOGFOOD_DOGFOOD_H
 #define _DOGFOOD_DOGFOOD_H
 
+// This many characters with the comment ends at the 64th column
+
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ////                                                        ////
@@ -58,9 +60,10 @@
 ////////////////////////////////////////////////////////////////
 // UDP Send
 //
-//     Linux and Apple (POSIX-ish)
-//
 #if defined(__linux__) || defined(__APPLE__)
+    //
+    //     Linux and Apple (POSIX-ish)
+    //
     #include <arpa/inet.h>
     #include <sys/socket.h>
     #include <unistd.h>
@@ -80,10 +83,10 @@
 
     #define _DOGFOOD_NOEXCEPT noexcept
 
-//
-//     Microsoft Windows
-//
 #elif defined(_MSC_VER)
+    //
+    // Microsoft Windows
+    //
     #include <WinSock2.h>
     #pragma comment(lib, "Ws2_32.lib")
     #pragma warning( disable : 4996 ) 
@@ -102,11 +105,17 @@
             static_cast<int>(length),0,a,size)==SOCKET_ERROR)\
             {closesocket(fd);return false;}closesocket(fd);\
         } while (0)
-
-    #define _DOGFOOD_NOEXCEPT
+    //
+    // Support for noexcept
+    //
+    #if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 180021114
+        #define _DOGFOOD_NOEXCEPT noexcept
+    #else
+        #define _DOGFOOD_NOEXCEPT
+    #endif
 #else
     //
-    //     OS Unknown
+    // OS Unknown
     //
     #error "Well, sorry for your weird OS..."
 #endif
@@ -116,19 +125,25 @@
 //
 //     UDP by default
 //
-#ifndef DOGFOOD_UNIT_TEST
-#define DOGFOOD_SEND_STDSTRING(string)\
-        UDP_SEND_DATAGRAM(string.c_str(),string.length())
-//
-//     Mock to global variable for unit testing
-//
+#if defined(_DOGFOOD_UNIT_TEST)
+    ////////////////////////////////////////////////////////////
+    // Mock to global variable for unit testing
+    static std::string _udp_send_mock;
+    #define DOGFOOD_SEND_STDSTRING(string) do {\
+                _udp_send_mock.clear();\
+                _udp_send_mock.append(string);\
+            } while (0)
+
+    ////////////////////////////////////////////////////////////
+    // Get the current mock
+    std::string GetSendMock() {
+        return _udp_send_mock;
+    }
 #else
-static std::string _udp_send_mock;
-#define DOGFOOD_SEND_STDSTRING(string) do {\
-            _udp_send_mock.clear();\
-            _udp_send_mock.append(string);\
-            std::printf("%s\n",string.c_str());\
-        } while (0)
+    ////////////////////////////////////////////////////////////
+    // Use 'the deal' (Shoutout to Tom)
+    #define DOGFOOD_SEND_STDSTRING(string)\
+            UDP_SEND_DATAGRAM(string.c_str(),string.length())
 #endif
 
 namespace DogFood {
@@ -158,38 +173,120 @@ namespace DogFood {
 using Tags = std::map<std::string, std::string>;
 
 ////////////////////////////////////////////////////////////////
+// ValidateTagName
+//
+//     - Must not be empty or longer than 200 characters
+//     - Must start with a letter
+//     - Must not end with a colon
+//     - Must contain only:
+//         - Alphanumerics
+//         - Underscores
+//         - Minuses
+//         - Colons
+//         - Periods
+//         - Slashes
+//     - Other special characters get converted to underscores.
+//
+inline bool ValidateTags(const std::string& _tag)
+{
+    #if defined(_DOGFOOD_UNSAFE_NAMES)
+        ////////////////////////////////////////////////////////
+        // Support unsafe names
+        return true;
+    #else
+        ////////////////////////////////////////////////////////
+        // Use explicit name checking
+
+        ////////////////////////////////////////////////////////
+        // Verify the length
+        if (_tag.length() == 0 || _tag.length() > 200)
+            return false;
+            
+        ////////////////////////////////////////////////////////
+        // Verify the first character is a letter
+        if (!std::isalpha(_tag.at(0)))
+            return false;
+
+        ////////////////////////////////////////////////////////
+        // Verify end is not a colon
+        if (_tag.back() == ':')
+            return false;
+
+        ////////////////////////////////////////////////////////
+        // Verify each character
+        for (size_t n = 0; n < _tag.length(); n++) {
+            const char c = _tag.at(n);
+            if (std::isalnum(c) ||
+                c == '_' || c == '-' ||
+                c == ':' || c == '.' ||
+                c == '/' || c == '\\')
+                continue;
+            else
+                return false;
+        }
+
+        return true;
+    #endif
+}
+
+////////////////////////////////////////////////////////////////
 // ExtractTags
 //
-//     Return a string modeling the a Tags object
+//     Return a string modeling a tags object
 //
 inline std::string ExtractTags(const Tags& _tags)
 {
+    ////////////////////////////////////////////////////////////
     // The tags string to build up
     std::string stream;
 
+    ////////////////////////////////////////////////////////////
     // Check for the presence of tags
-    if (_tags.size() > 0) stream += "|#";
+    if (_tags.size() > 0)
+        stream += "|#";
+
+    ////////////////////////////////////////////////////////
+    // Tag buffer
+    std::string _tag = "";
 
     ////////////////////////////////////////////////////////////
     // Add each tag
-    for (const auto p : _tags)
+    for (const auto& p : _tags)
     {
+        ////////////////////////////////////////////////////////
         // If the 'Key' is not empty
-        if (p.first.size())
+        if (p.first.size() > 0)
         {
+            ////////////////////////////////////////////////////
             // Append the 'Key'
-            stream +=p.first;
+            _tag += p.first;
 
-            // If the 'Value' is not empty
-            if (p.second.size()) stream += (":" + p.second);
+            ////////////////////////////////////////////////////
+            // If the 'Value' is not empty, append after a colon
+            if (p.second.size() > 0)
+                _tag += (":" + p.second);
 
-            // Append a comma to indicate the next 'Key'
-            stream += ",";
+            ////////////////////////////////////////////////////
+            // Validate the tag
+            if (!ValidateTags(_tag))
+                continue;
+            
+            ////////////////////////////////////////////////////
+            // Append the tag and a comma for the next key-value
+            stream += (_tag + ",");
+
+            ////////////////////////////////////////////////////
+            // Clear the tag buffer
+            _tag.clear();
         }
     }
 
+    ////////////////////////////////////////////////////////////
     // Remove the trailing comma if present
-    if (stream.size() > 0 && stream.back() == ',') stream.pop_back();
+    //     I really dislike 'if' statements to check boundary
+    //     conditions in loops.
+    if (stream.size() > 0 && stream.back() == ',')
+        stream.pop_back();
 
     return stream;
 }
@@ -198,27 +295,42 @@ inline std::string ExtractTags(const Tags& _tags)
 // ValidateMetricName
 //
 //     - Must not be empty or longer than 200 characters
-//     - Must begin with an alphanumeric
+//     - Must start with a letter
 //     - Must not contain '|', ':', or '@'
 //
 inline bool ValidateMetricName(const std::string& _name)
 {
-#if defined(DOGFOOD_UNSAFE_NAMES)
-    return true;
-#else
-    if (_name.length() == 0 || _name.length() > 200)
-        return false;
+    #if defined(_DOGFOOD_UNSAFE_NAMES)
+        ////////////////////////////////////////////////////////
+        // Support unsafe names
+        return true;
+    #else
+        ////////////////////////////////////////////////////////
+        // Use explicit name checking
 
-    for (size_t n = 0; n < _name.length(); n++) {
-        const char c = _name.at(n);
-        if (std::isalnum(c) || c == '_' || c == '.')
-            continue;
-        else
+        ////////////////////////////////////////////////////////
+        // Verify the length
+        if (_name.length() == 0 || _name.length() > 200)
             return false;
-    }
+            
+        ////////////////////////////////////////////////////////
+        // Verify the first character is a letter
+        if (!std::isalpha(_name.at(0)))
+            return false;
 
-    return std::isalpha(_name.at(0));
-#endif
+        ////////////////////////////////////////////////////////
+        // Verify each character
+        for (size_t n = 0; n < _name.length(); n++)
+        {
+            const char c = _name.at(n);
+            if (std::isalnum(c) || c == '_' || c == '.')
+                continue;
+            else
+                return false;
+        }
+
+        return true;
+    #endif
 }
 
 ////////////////////////////////////////////////////////////////
@@ -241,9 +353,9 @@ inline bool ValidateSampleRate(const double _rate)
 enum Type { Counter, Gauge, Timer, Histogram, Set };
 
 ////////////////////////////////////////////////////////////////
-// ValidateSampleRate
+// ValidateType
 //
-//     Must be between 0.0 and 1.0 (inclusive)
+//     Must be a valid DataDog metric type
 //
 inline bool ValidateType(const Type& _type)
 {
@@ -267,18 +379,16 @@ inline bool ValidateType(const Type& _type)
 //
 inline std::string EscapeEventText(const std::string& _text)
 {
-    // String buffer
-    std::string buffer;
-
+    ////////////////////////////////////////////////////////////
     // Iterate through input string searching for '\n'
+    std::string buffer;
     for (const char c : _text)
     {
+        ////////////////////////////////////////////////////////
         // Replace newline literals with '\\n'
         if (c == '\n') buffer.append("\\n");
         else           buffer.push_back(c);
     }
-
-    // Return the escaped buffer
     return buffer;
 }
 
@@ -783,6 +893,6 @@ _DOGFOOD_NOEXCEPT
     #pragma warning( default : 4996 ) 
 #endif
 
-#endif // _DOGFOOD_DOGFOOD_H
-
 // Well, I guess that is the end. Until next time, folks!
+
+#endif // _DOGFOOD_DOGFOOD_H
