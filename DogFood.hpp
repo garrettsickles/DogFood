@@ -81,8 +81,6 @@
             {close(fd);return false;}close(fd);\
         } while (0)
 
-    #define _DOGFOOD_NOEXCEPT noexcept
-
 #elif defined(_MSC_VER)
     //
     // Microsoft Windows
@@ -105,19 +103,34 @@
             static_cast<int>(length),0,a,size)==SOCKET_ERROR)\
             {closesocket(fd);return false;}closesocket(fd);\
         } while (0)
-    //
-    // Support for noexcept
-    //
-    #if defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 180021114
-        #define _DOGFOOD_NOEXCEPT noexcept
-    #else
-        #define _DOGFOOD_NOEXCEPT
-    #endif
+
 #else
     //
     // OS Unknown
     //
     #error "Well, sorry for your weird OS..."
+#endif
+
+////////////////////////////////////////////////////////////////
+// noexcept support
+//
+//
+#if defined(__clang__)
+    #if __has_feature(cxx_noexcept)
+        #define _DOGFOOD_HAS_NOEXCEPT
+    #endif
+#else
+    #if defined(__GXX_EXPERIMENTAL_CXX0X__) && \
+            __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
+            defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
+        #define _DOGFOOD_HAS_NOEXCEPT
+    #endif
+#endif
+
+#ifdef _DOGFOOD_HAS_NOEXCEPT
+    #define _DOGFOOD_NOEXCEPT noexcept
+#else
+    #define _DOGFOOD_NOEXCEPT
 #endif
 
 ////////////////////////////////////////////////////////////////
