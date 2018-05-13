@@ -97,7 +97,7 @@
             int size=static_cast<int>(sizeof(client));\
             std::memset(&client,0,size);\
             client.sin_family= AF_INET;\
-            client.sin_port=htons(9236);\
+            client.sin_port=htons(DOGSTATSD_PORT);\
             client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
             struct sockaddr* a=\
             reinterpret_cast<struct sockaddr*>(&client);\
