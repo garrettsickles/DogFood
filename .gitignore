@@ -38,6 +38,7 @@
 *.DSYM/
 
 # Visual Studio
+.vs/
 bin/
 obj/
 *.suo
