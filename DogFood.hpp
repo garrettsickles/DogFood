@@ -116,21 +116,21 @@
 //
 //
 #if defined(__clang__)
-#if __has_feature(cxx_noexcept)
-#define _DOGFOOD_HAS_NOEXCEPT
-#endif
+    #if __has_feature(cxx_noexcept)
+        #define _DOGFOOD_HAS_NOEXCEPT
+    #endif
 #else
-#if defined(__GXX_EXPERIMENTAL_CXX0X__) && \
-        __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
-        defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
-#define _DOGFOOD_HAS_NOEXCEPT
-#endif
+    #if defined(__GXX_EXPERIMENTAL_CXX0X__) && \
+            __GNUC__ * 10 + __GNUC_MINOR__ >= 46 || \
+            defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023026
+        #define _DOGFOOD_HAS_NOEXCEPT
+    #endif
 #endif
 
 #ifdef _DOGFOOD_HAS_NOEXCEPT
-#define _DOGFOOD_NOEXCEPT noexcept
+    #define _DOGFOOD_NOEXCEPT noexcept
 #else
-#define _DOGFOOD_NOEXCEPT
+    #define _DOGFOOD_NOEXCEPT
 #endif
 
 ////////////////////////////////////////////////////////////////
