@@ -1,5 +1,7 @@
 # DogFood
 
+[(We Official)](https://docs.datadoghq.com/developers/libraries/)
+
 [![Build Status](https://travis-ci.org/garrettsickles/DogFood.svg?branch=master)](https://travis-ci.org/garrettsickles/DogFood)
 [![Build status](https://ci.appveyor.com/api/projects/status/x9e35p9nknds5p13/branch/master?svg=true)](https://ci.appveyor.com/project/garrettsickles/dogfood/branch/master)
 
