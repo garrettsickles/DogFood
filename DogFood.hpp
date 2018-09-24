@@ -267,6 +267,10 @@ inline std::string ExtractTags(const Tags& _tags)
     for (const auto& p : _tags)
     {
         ////////////////////////////////////////////////////////
+        // Clear the tag buffer
+        _tag.clear();
+        
+        ////////////////////////////////////////////////////////
         // If the 'Key' is not empty
         if (p.first.size() > 0)
         {
@@ -287,10 +291,6 @@ inline std::string ExtractTags(const Tags& _tags)
             ////////////////////////////////////////////////////
             // Append the tag and a comma for the next key-value
             stream += (_tag + ",");
-
-            ////////////////////////////////////////////////////
-            // Clear the tag buffer
-            _tag.clear();
         }
     }
 
