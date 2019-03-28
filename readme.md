@@ -15,6 +15,10 @@ Running the barebones example program in `example/DogFood.example.cpp` produces 
 
 ![DataDog Capture](https://github.com/garrettsickles/DogFood/blob/master/example/Example.PNG?raw=true)
 
+## Before You Start
+This project is used for communicating with a **DataDog Agent**
+
+If you do not have a [DataDog Agent](https://docs.datadoghq.com/agent) installed, please install it and connect it to your account!
 ## Configuration
 ```cpp
 ////////////////////////////////////////////////////////////////
