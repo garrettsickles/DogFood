@@ -520,8 +520,6 @@ _DOGFOOD_NOEXCEPT
 {
     ////////////////////////////////////////////////////////////
     // Verify the type of the input based on the metric type
-    ////////////////////////////////////////////////////////////
-    // Verify the type of the input based on the metric type
     switch (_type)
     {
         case Type::Counter:
