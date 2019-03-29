@@ -27,7 +27,7 @@ void UnitTest::Setup() {
     AddTest("Extract Tags", "Single key tag", [](void) {
         DogFood::Tags tags;
 
-        tags["tag1"];
+        tags.push_back(DogFood::Tag("tag1"));
 
         AssertEqual(DogFood::ExtractTags(tags),
             std::string("|#tag1"),
@@ -39,9 +39,9 @@ void UnitTest::Setup() {
     AddTest("Extract Tags", "Multiple key tags", [](void) {
         DogFood::Tags tags;
 
-        tags["tag1"];
-        tags["tag2"];
-        tags["tag3"];
+        tags.push_back(DogFood::Tag("tag1"));
+        tags.push_back(DogFood::Tag("tag2"));
+        tags.push_back(DogFood::Tag("tag3"));
 
         AssertEqual(DogFood::ExtractTags(tags),
             std::string("|#tag1,tag2,tag3"),
@@ -53,7 +53,7 @@ void UnitTest::Setup() {
     AddTest("Extract Tags", "Single key-value tag", [](void) {
         DogFood::Tags tags;
 
-        tags["tag1"] = "thing1";
+        tags.push_back(DogFood::Tag("tag1", "thing1"));
 
         AssertEqual(DogFood::ExtractTags(tags), std::string("|#tag1:thing1"),
             "Tag string should contain single key-value tag"
@@ -64,9 +64,10 @@ void UnitTest::Setup() {
     AddTest("Extract Tags", "Multiple key-value tags", [](void) {
         DogFood::Tags tags;
 
-        tags["tag1"] = "thing1";
-        tags["tag2"] = "thing2";
-        tags["tag3"] = "thing3";
+        tags.push_back(DogFood::Tag("tag1", "thing1"));
+        tags.push_back(DogFood::Tag("tag2", "thing2"));
+        tags.push_back(DogFood::Tag("tag3", "thing3"));
+
 
         AssertEqual(DogFood::ExtractTags(tags),
             std::string("|#tag1:thing1,tag2:thing2,tag3:thing3"),

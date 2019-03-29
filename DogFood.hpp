@@ -36,6 +36,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 ////////////////////////////////////////////////////////////////
 // DogStatsD
@@ -183,8 +184,12 @@ namespace DogFood {
 //     Use a map of string->string for storing 'Key'->'Value'
 //     pairs. If the 'Value' is empty, only the 'Key' is used
 //
-using Tags = std::map<std::string, std::string>;
+using Tags = std::vector<std::pair<std::string, std::string>>;
 
+std::pair<std::string, std::string> Tag(std::string key, std::string value = "")
+{
+    return std::make_pair(key, value);
+}
 ////////////////////////////////////////////////////////////////
 // ValidateTagName
 //
