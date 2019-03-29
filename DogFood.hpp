@@ -492,21 +492,48 @@ inline bool ValidatePayloadSize(const std::string& _payload)
 //
 //     Numeric should be an integral or floating-point type
 //
-template <typename Numeric>
-typename std::enable_if<
-    std::is_integral<Numeric>::value ||
-    std::is_floating_point<Numeric>::value,
-bool>::type
+template <typename ValueType> struct is_stdstring :
+    std::false_type{};
+template<> struct is_stdstring<std::string> :
+    std::true_type{};
+template <typename ValueType> struct is_numeric :
+    std::integral_constant<bool,
+        std::is_integral<ValueType>::value ||
+        std::is_floating_point<ValueType>::value>{};
+
+template <typename ValueType, typename Output>
+struct MetricTypeAllowed : std::enable_if<
+    is_numeric<ValueType>::value ||
+    is_stdstring<ValueType>::value, Output> {};
+
+template<typename ValueType>
+typename MetricTypeAllowed<ValueType, bool>::type
 Metric
 (
     const std::string _name,
-    const Numeric     _number,
+    const ValueType   _value,
     const Type        _type,
-    const double      _rate     = 1.0,
-    const Tags&       _tags     = Tags()
+    const double      _rate = 1.0,
+    const Tags&       _tags = Tags()
 )
 _DOGFOOD_NOEXCEPT
 {
+    ////////////////////////////////////////////////////////////
+    // Verify the type of the input based on the metric type
+    ////////////////////////////////////////////////////////////
+    // Verify the type of the input based on the metric type
+    switch (_type)
+    {
+        case Type::Counter:
+        case Type::Gauge:
+        case Type::Timer:
+        case Type::Histogram:
+            if (!is_numeric<ValueType>::value) return false;
+            else break;
+        default:
+            break;
+    }
+
     ////////////////////////////////////////////////////////////
     // Declare the datagram stream
     std::string datagram;
@@ -527,7 +554,7 @@ _DOGFOOD_NOEXCEPT
     //
     //     `metric.name:value|`
     //
-    datagram += _name + ":" + std::to_string(_number) + "|";
+    datagram += _name + ":" + std::to_string(_value) + "|";
 
     ////////////////////////////////////////////////////////////
     // Verify the type and append the datagram
