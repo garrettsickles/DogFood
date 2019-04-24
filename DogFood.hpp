@@ -2,7 +2,7 @@
 #define _DOGFOOD_DOGFOOD_H
 
 // This many characters with the comment ends at the 64th column
-
+// // Font Name: Colossal
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ////                                                        ////
@@ -36,6 +36,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 ////////////////////////////////////////////////////////////////
@@ -46,7 +47,7 @@
 //     flag.
 //     
 //     Override the default port
-//         E.G. - g++ (...) -DDOGSTATSD_PORT=12345
+//         E.G. - g++ (...) -DDOGSTATSD_HOST=12345
 //
 //     Override the default host
 //         E.G. - g++ (...) -DDOGSTATSD_PORT="255.255.255.255"
@@ -68,15 +69,15 @@
     #include <arpa/inet.h>
     #include <sys/socket.h>
     #include <unistd.h>
-    #define UDP_SEND_DATAGRAM(data,length) do {\
+    #define UDP_SEND_DATAGRAM(data,length,path,port) do {\
             struct sockaddr_in client;\
             int fd=socket(AF_INET, SOCK_DGRAM, 0);\
             if (fd==-1)return false;\
             int size=static_cast<int>(sizeof(client));\
             std::memset(&client,0,size);\
             client.sin_family=AF_INET;\
-            client.sin_port=htons(DOGSTATSD_PORT);\
-            client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
+            client.sin_port=htons(port);\
+            client.sin_addr.s_addr=inet_addr(path);\
             struct sockaddr* addr= (struct sockaddr*)&client;\
             if(sendto(fd,data,length,0,addr,size)==-1)\
             {close(fd);return false;}close(fd);\
@@ -89,15 +90,18 @@
     #include <WinSock2.h>
     #pragma comment(lib, "Ws2_32.lib")
     #pragma warning( disable : 4996 ) 
-    #define UDP_SEND_DATAGRAM(data,length) do {\
+    #define UDP_SEND_DATAGRAM(data,length,path,port) do {\
+            WSADATA wsaData;\
+            if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {\
+                return false; }\
             struct sockaddr_in client;\
             SOCKET fd=socket(AF_INET, SOCK_DGRAM, 0);\
             if (fd==INVALID_SOCKET)return false;\
             int size=static_cast<int>(sizeof(client));\
             std::memset(&client,0,size);\
             client.sin_family= AF_INET;\
-            client.sin_port=htons(DOGSTATSD_PORT);\
-            client.sin_addr.s_addr=inet_addr(DOGSTATSD_HOST);\
+            client.sin_port=htons(port);\
+            client.sin_addr.s_addr=inet_addr(path);\
             struct sockaddr* a=\
             reinterpret_cast<struct sockaddr*>(&client);\
             if(sendto(fd,reinterpret_cast<const char*>(data),\
@@ -110,6 +114,13 @@
     // OS Unknown
     //
     #error "Well, sorry for your weird OS..."
+#endif
+
+////////////////////////////////////////////////////////////////
+// UDS Support
+//
+#if defined(__linux__)
+    #define _DOGFOOD_UDS_SUPPORT
 #endif
 
 ////////////////////////////////////////////////////////////////
@@ -134,33 +145,46 @@
     #define _DOGFOOD_NOEXCEPT
 #endif
 
-////////////////////////////////////////////////////////////////
-// DogFood Send
-//
-//     UDP by default
-//
-#if defined(_DOGFOOD_UNIT_TEST)
-    ////////////////////////////////////////////////////////////
-    // Mock to global variable for unit testing
-    static std::string _udp_send_mock;
-    #define DOGFOOD_SEND_STDSTRING(string) do {\
-                _udp_send_mock.clear();\
-                _udp_send_mock.append(string);\
-            } while (0)
-
-    ////////////////////////////////////////////////////////////
-    // Get the current mock
-    std::string GetSendMock() {
-        return _udp_send_mock;
-    }
-#else
-    ////////////////////////////////////////////////////////////
-    // Use 'the deal' (Shoutout to Tom)
-    #define DOGFOOD_SEND_STDSTRING(string)\
-            UDP_SEND_DATAGRAM(string.c_str(),string.length())
-#endif
-
 namespace DogFood {
+
+////////////////////////////////////////////////////////////////
+//                                                            //
+//                                                            //
+//           .d8888b.                       .d888             //
+//          d88P  Y88b                      d88P"             //
+//          888    888                      888               //
+//          888          .d88b.   88888b.   888888            //
+//          888         d88""88b  888 "88b  888               //
+//          888    888  888  888  888  888  888               //
+//          Y88b  d88P  Y88..88P  888  888  888               //
+//           "Y8888P"    "Y88P"   888  888  888               //
+//                                                            //
+//                                                            //
+////////////////////////////////////////////////////////////////
+enum class Mode
+{
+#if defined(_DOGFOOD_UDS_SUPPORT)
+    UDS,
+#endif
+    UDP
+};
+
+using Configuration = std::tuple<Mode, std::string, int>;
+
+Configuration Configure(const Mode& _mode, const std::string& _path, const int _port)
+{
+    return std::make_tuple(_mode, _path, _port);
+}
+
+Configuration DefaultConfiguration()
+{
+    return std::make_tuple
+    (
+        Mode::UDP,
+        std::string(DOGSTATSD_HOST),
+        static_cast<int>(DOGSTATSD_PORT)
+    );
+}
 
 ////////////////////////////////////////////////////////////////
 //                                                            //
@@ -190,6 +214,7 @@ std::pair<std::string, std::string> Tag(std::string key, std::string value = "")
 {
     return std::make_pair(key, value);
 }
+
 ////////////////////////////////////////////////////////////////
 // ValidateTagName
 //
@@ -368,7 +393,14 @@ inline bool ValidateSampleRate(const double _rate)
 //
 //     The 'Type' of a DataDog 'Metric'
 //
-enum Type { Counter, Gauge, Timer, Histogram, Set };
+enum Type
+{
+    Counter,
+    Gauge,
+    Timer,
+    Histogram,
+    Set
+};
 
 ////////////////////////////////////////////////////////////////
 // ValidateType
@@ -490,44 +522,86 @@ inline bool ValidatePayloadSize(const std::string& _payload)
 ////////////////////////////////////////////////////////////////
 // Template
 //
-//     Numeric should be an integral or floating-point type
+//     Numeric should be an integral, floating-point, or string type
 //
-template <typename Numeric>
-typename std::enable_if<
-    std::is_integral<Numeric>::value ||
-    std::is_floating_point<Numeric>::value,
-bool>::type
+template <typename ValueType>
+struct is_stdstring :
+    std::false_type{};
+
+template<>
+struct is_stdstring<std::string> :
+    std::true_type{};
+
+template <typename ValueType>
+struct is_numeric :
+    std::integral_constant<bool,
+    std::is_integral<ValueType>::value ||
+    std::is_floating_point<ValueType>::value>{};
+
+template <typename ValueType, typename Output>
+struct MetricTypeAllowed :
+    std::enable_if<
+        is_numeric<ValueType>::value ||
+        is_stdstring<ValueType>::value, Output>{};
+
+template <typename ValueType>
+std::string value_to_string(const ValueType& _value) {
+    return std::to_string(_value);
+}
+
+template<>
+std::string value_to_string<std::string>(const std::string& _value) {
+    return _value;
+}
+
+template<typename ValueType>
+typename MetricTypeAllowed<ValueType, std::string>::type
 Metric
 (
     const std::string _name,
-    const Numeric     _number,
+    const ValueType   _value,
     const Type        _type,
-    const double      _rate     = 1.0,
-    const Tags&       _tags     = Tags()
+    const double      _rate = 1.0,
+    const Tags&       _tags = Tags()
 )
 _DOGFOOD_NOEXCEPT
 {
     ////////////////////////////////////////////////////////////
+    // Verify the type of the input based on the metric type
+    switch (_type)
+    {
+        case Type::Counter:
+        case Type::Gauge:
+        case Type::Timer:
+        case Type::Histogram:
+            if (!is_numeric<ValueType>::value) return "";
+            break;
+        default:
+            // Type::Set - Can be string or numeric
+            break;
+    }
+
+    ////////////////////////////////////////////////////////////
     // Declare the datagram stream
-    std::string datagram;
+    std::string _datagram;
 
     ////////////////////////////////////////////////////////////
     // Validate the name
-    if (!ValidateMetricName(_name)) return false;
+    if (!ValidateMetricName(_name)) return "";
 
     ////////////////////////////////////////////////////////////
     // Verify the rate
     //
     //     - Must be between 0.0 and 1.0 (inclusive)
     //
-    if (!ValidateSampleRate(_rate)) return false;
+    if (!ValidateSampleRate(_rate)) return "";
     
     ////////////////////////////////////////////////////////////
     // Add the name and the numeric to the datagram
     //
     //     `metric.name:value|`
     //
-    datagram += _name + ":" + std::to_string(_number) + "|";
+    _datagram += _name + ":" + value_to_string(_value) +"|";
 
     ////////////////////////////////////////////////////////////
     // Verify the type and append the datagram
@@ -536,12 +610,12 @@ _DOGFOOD_NOEXCEPT
     //
     switch (_type)
     {
-        case Type::Counter:   datagram += "c";  break;
-        case Type::Gauge:     datagram += "g";  break;
-        case Type::Timer:     datagram += "ms"; break;
-        case Type::Histogram: datagram += "h";  break;
-        case Type::Set:       datagram += "s";  break;
-        default:              return false;
+        case Type::Counter:   _datagram += "c";  break;
+        case Type::Gauge:     _datagram += "g";  break;
+        case Type::Timer:     _datagram += "ms"; break;
+        case Type::Histogram: _datagram += "h";  break;
+        case Type::Set:       _datagram += "s";  break;
+        default:              return "";
     }
 
     ////////////////////////////////////////////////////////////
@@ -550,24 +624,20 @@ _DOGFOOD_NOEXCEPT
     //     `|@sample_rate`
     //
     if (_rate != 1.0)
-        datagram += "|@" + std::to_string(_rate);
+        _datagram += "|@" + std::to_string(_rate);
 
     ////////////////////////////////////////////////////////////
     // Extract the tags string into the datagram if present
     //
     //     `|#tag1:value,tag2`
     //
-    datagram += ExtractTags(_tags);
+    _datagram += ExtractTags(_tags);
 
     ////////////////////////////////////////////////////////////
     // Validate the payload size
-    if (!ValidatePayloadSize(datagram)) return false;
+    if (!ValidatePayloadSize(_datagram)) return "";
 
-    ////////////////////////////////////////////////////////////
-    // Send the datagram
-    DOGFOOD_SEND_STDSTRING(datagram);
-
-    return true;
+    return _datagram;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -650,14 +720,24 @@ _DOGFOOD_NOEXCEPT
 //
 //     The 'Priority' of a DataDog 'Event'
 //
-enum class Priority { Low, Normal };
+enum class Priority
+{
+    Low,
+    Normal
+};
 
 ////////////////////////////////////////////////////////////////
 // Alert
 //
 //     The 'Alert' type of a DataDog 'Event'
 //
-enum class Alert { Info, Success, Warning, Error };
+enum class Alert
+{
+    Info,
+    Success,
+    Warning,
+    Error
+};
 
 ////////////////////////////////////////////////////////////////
 // Template
@@ -667,8 +747,7 @@ enum class Alert { Info, Success, Warning, Error };
 template <typename Numeric>
 typename std::enable_if<
     std::is_integral<Numeric>::value ||
-    std::is_floating_point<Numeric>::value,
-bool>::type
+    std::is_floating_point<Numeric>::value, std::string>::type
 Event
 (
     const std::string _title,
@@ -685,7 +764,7 @@ _DOGFOOD_NOEXCEPT
 {
     ////////////////////////////////////////////////////////////
     // Declare the datagram stream
-    std::string datagram;
+    std::string _datagram;
 
     ////////////////////////////////////////////////////////////
     // Get the escaped text
@@ -696,7 +775,7 @@ _DOGFOOD_NOEXCEPT
     //
     //     `_e{title.length,text.length}:title|text|`
     //
-    datagram
+    _datagram
         += "_e{" + std::to_string(_title.length()) +
              "," + std::to_string(_etext.length()) +
             "}:" + _title + "|" + _etext;
@@ -704,34 +783,35 @@ _DOGFOOD_NOEXCEPT
     ////////////////////////////////////////////////////////////
     // Add the timestamp to the datagram if present
     if (_timestamp != static_cast<Numeric>(0))
-        datagram += "|d:" + std::to_string(_timestamp);
+        _datagram += "|d:" + std::to_string(_timestamp);
 
     ////////////////////////////////////////////////////////////
     // Add the hostname to the datagram if present
     if (_hostname != "")
-        datagram += "|h:" + _hostname;
+        _datagram += "|h:" + _hostname;
 
     ////////////////////////////////////////////////////////////
     // Add the priority to the datagram if present
     if (_priority == Priority::Low)
-        datagram += "|p:low";
+        _datagram += "|p:low";
 
     ////////////////////////////////////////////////////////////
     // Add the source type name to the datagram if present
     if (_source_type_name != "")
-        datagram += "|s:" + _source_type_name;
+        _datagram += "|s:" + _source_type_name;
 
     ////////////////////////////////////////////////////////////
     // Verify the alert type and append the datagram if valid
     //
-    //     `success` or `warning` or `error`
+    //     - `success` or `warning` or `error`
+    //     - Default if not present to `info`
     //
     switch (_alert_type)
     {
-        case Alert::Success: datagram += "|t:success"; break;
-        case Alert::Warning: datagram += "|t:warning"; break;
-        case Alert::Error:   datagram += "|t:error";   break;
-        default:                                       break;
+        case Alert::Success: _datagram += "|t:success"; break;
+        case Alert::Warning: _datagram += "|t:warning"; break;
+        case Alert::Error:   _datagram += "|t:error";   break;
+        default:                                        break;
     }
 
     ////////////////////////////////////////////////////////////
@@ -739,17 +819,13 @@ _DOGFOOD_NOEXCEPT
     //
     //     `|#tag1:value,tag2`
     //
-    datagram += ExtractTags(_tags);
+    _datagram += ExtractTags(_tags);
 
     ////////////////////////////////////////////////////////////
     // Validate the payload size
-    if (!ValidatePayloadSize(datagram)) return false;
+    if (!ValidatePayloadSize(_datagram)) return "";
 
-    ////////////////////////////////////////////////////////////
-    // Send the datagram
-    DOGFOOD_SEND_STDSTRING(datagram);
-
-    return true;
+    return _datagram;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -818,7 +894,8 @@ _DOGFOOD_NOEXCEPT
 //
 //     The 'Status' of a DataDog 'Service Check'
 //
-enum class Status {
+enum class Status
+{
     Ok,
     Warning,
     Critical,
@@ -833,8 +910,7 @@ enum class Status {
 template <typename Numeric>
 typename std::enable_if<
     std::is_integral<Numeric>::value ||
-    std::is_floating_point<Numeric>::value,
-bool>::type
+    std::is_floating_point<Numeric>::value, std::string>::type
 ServiceCheck
 (
     const std::string _name,
@@ -848,14 +924,14 @@ _DOGFOOD_NOEXCEPT
 {
     ////////////////////////////////////////////////////////////
     // Declare the datagram stream
-    std::string datagram;
+    std::string _datagram;
 
     ////////////////////////////////////////////////////////////
     // Add the name to the datagram
     //
     //     `_sc|name|`
     //
-    datagram += "_sc|" + _name + "|";
+    _datagram += "_sc|" + _name + "|";
 
     ////////////////////////////////////////////////////////////
     // Verify the status and append the datagram if valid
@@ -864,43 +940,80 @@ _DOGFOOD_NOEXCEPT
     //
     switch (_status)
     {
-        case Status::Ok:       datagram += "0"; break;
-        case Status::Warning:  datagram += "1"; break;
-        case Status::Critical: datagram += "2"; break;
-        case Status::Unknown:  datagram += "3"; break;
-        default:               return false;
+        case Status::Ok:       _datagram += "0"; break;
+        case Status::Warning:  _datagram += "1"; break;
+        case Status::Critical: _datagram += "2"; break;
+        case Status::Unknown:  _datagram += "3"; break;
+        default:               return "";
     }
 
     ////////////////////////////////////////////////////////////
     // Add the timestamp to the datagram if present
     if (_timestamp != static_cast<Numeric>(0))
-        datagram += "|d:" + std::to_string(_timestamp);
+        _datagram += "|d:" + std::to_string(_timestamp);
 
     ////////////////////////////////////////////////////////////
     // Add the hostname to the datagram if present
     if (_hostname != "")
-        datagram += "|h:" + _hostname;
+        _datagram += "|h:" + _hostname;
 
     ////////////////////////////////////////////////////////////
     // Extract the tags string into the datagram
     //
     //     `|#tag1:value,tag2`
     //
-    datagram += ExtractTags(_tags);
+    _datagram += ExtractTags(_tags);
 
     ////////////////////////////////////////////////////////////
     // Add the service check message name
     // to the datagram if present
     if (_message != "")
-        datagram += "|m:" + _message;
+        _datagram += "|m:" + _message;
 
     ////////////////////////////////////////////////////////////
     // Validate the payload size
-    if (!ValidatePayloadSize(datagram)) return false;
+    if (!ValidatePayloadSize(_datagram)) return "";
 
-    ////////////////////////////////////////////////////////////
-    // Send the datagram
-    DOGFOOD_SEND_STDSTRING(datagram);
+    return _datagram;
+}
+
+////////////////////////////////////////////////////////////////
+//                                                            //
+//        .d8888b.                            888             //
+//       d88P  Y88b                           888             //
+//       Y88b.                                888             //
+//        "Y888b.     .d88b.   88888b.    .d88888             // 
+//           "Y88b.  d8P  Y8b  888 "88b  d88" 888             // 
+//             "888  88888888  888  888  888  888             // 
+//       Y88b  d88P  Y8b.      888  888  Y88b 888             //         
+//        "Y8888P"    "Y8888   888  888   "Y88888             //
+//                                                            //
+////////////////////////////////////////////////////////////////
+bool
+Send
+(
+    const std::string _datagram,
+    const Configuration _configuration = DefaultConfiguration()
+) {
+    Mode        _mode = std::get<0>(_configuration);
+    std::string _path = std::get<1>(_configuration);
+    int         _port = std::get<2>(_configuration);
+
+    if (_mode == Mode::UDP)
+    {
+        UDP_SEND_DATAGRAM(
+            _datagram.data(),
+            _datagram.size(),
+            _path.c_str(),
+            _port
+        );
+    }
+    #if defined(_DOGFOOD_UDS_SUPPORT)
+    else if (_mode == Mode::UDS)
+    {
+
+    }
+    #endif
 
     return true;
 }
