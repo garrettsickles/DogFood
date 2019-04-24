@@ -4,8 +4,8 @@
 
 int main() {
     while (true) {
-        #if 1
-        DogFood::Send(DogFood::Metric(
+        DogFood::Send(
+            DogFood::Metric(
             "DogFood.MetricTest",
             49.5555,
             DogFood::Counter,
@@ -13,7 +13,8 @@ int main() {
             DogFood::Tags({ { "f", "9" }, { "g", "8" } })
         ));
 
-        DogFood::Send(DogFood::Event(
+        DogFood::Send(
+            DogFood::Event(
             "DogFood Event",
             "The event was invoked",
             time(NULL)
@@ -24,7 +25,6 @@ int main() {
             DogFood::Status::Warning,
             time(NULL)
         ));
-        #endif
 
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

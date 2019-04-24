@@ -2,7 +2,7 @@
 #define _DOGFOOD_DOGFOOD_H
 
 // This many characters with the comment ends at the 64th column
-// // Font Name: Colossal
+
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 ////                                                        ////
@@ -171,8 +171,13 @@ enum class Mode
 
 using Configuration = std::tuple<Mode, std::string, int>;
 
-Configuration Configure(const Mode& _mode, const std::string& _path, const int _port)
-{
+Configuration
+Configure
+(
+    const Mode& _mode,
+    const std::string& _path,
+    const int _port
+) {
     return std::make_tuple(_mode, _path, _port);
 }
 
@@ -210,8 +215,12 @@ Configuration DefaultConfiguration()
 //
 using Tags = std::vector<std::pair<std::string, std::string>>;
 
-std::pair<std::string, std::string> Tag(std::string key, std::string value = "")
-{
+std::pair<std::string, std::string>
+Tag
+(
+    std::string key,
+    std::string value = ""
+) {
     return std::make_pair(key, value);
 }
 
@@ -520,37 +529,50 @@ inline bool ValidatePayloadSize(const std::string& _payload)
 //
 
 ////////////////////////////////////////////////////////////////
-// Template
+// Helper Templates
 //
-//     Numeric should be an integral, floating-point, or string type
+//     Numeric should be an integral, floating-point,
 //
+
+// Default is not std::string
 template <typename ValueType>
-struct is_stdstring :
-    std::false_type{};
+struct is_stdstring : std::false_type{};
 
+// Specialize std::string is std::string
 template<>
-struct is_stdstring<std::string> :
-    std::true_type{};
+struct is_stdstring<std::string> : std::true_type{};
 
+// Numeric combines integral and floating point
 template <typename ValueType>
 struct is_numeric :
     std::integral_constant<bool,
-    std::is_integral<ValueType>::value ||
-    std::is_floating_point<ValueType>::value>{};
+        std::is_integral<ValueType>::value ||
+        std::is_floating_point<ValueType>::value>{};
 
+// MetricTypeAllowed combines std::string and numeric
 template <typename ValueType, typename Output>
 struct MetricTypeAllowed :
     std::enable_if<
         is_numeric<ValueType>::value ||
         is_stdstring<ValueType>::value, Output>{};
 
+// Default to calling std::to_string
 template <typename ValueType>
-std::string value_to_string(const ValueType& _value) {
+std::string
+value_to_string
+(
+    const ValueType& _value
+) {
     return std::to_string(_value);
 }
 
+// Specialize std::string to identity
 template<>
-std::string value_to_string<std::string>(const std::string& _value) {
+std::string
+value_to_string<std::string>
+(
+    const std::string& _value
+) {
     return _value;
 }
 
