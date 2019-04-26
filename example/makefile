@@ -12,15 +12,19 @@ DIR_INCLUDE = ..
 DIR_SRC     = .
 DIR_BIN     = bin
 
-# Targets
-TGT_BIN := $(wildcard $(DIR_SRC)/*.$(EXT_CPP))
+all:
+	make simple_example_linux_uds
+	make simple_example
 
-# Binaries
-BIN_EXAMPLE := $(TGT_BIN:$(DIR_SRC)/%.$(EXT_CPP)=$(DIR_BIN)/%)
-
-$(BIN_EXAMPLE): $(DIR_BIN)/% : $(DIR_SRC)/%.$(EXT_CPP)
+simple_example_linux_uds:
+	@echo "Building simple_example_linux_uds"
 	@mkdir -p bin
-	@$(CPP_BIN) $(CPP_STD) $(CPP_WRN) $(CPP_INC) $< -o $@
+	@$(CPP_BIN) $(CPP_STD) $(CPP_WRN) $(CPP_INC) simple_example_linux_uds.cpp -o bin/simple_example_linux_uds
+
+simple_example:
+	@echo "Building simple_example"
+	@mkdir -p bin
+	@$(CPP_BIN) $(CPP_STD) $(CPP_WRN) $(CPP_INC) simple_example.cpp -o bin/simple_example
 
 clean:
 	@rm -rf $(DIR_BIN)/*
