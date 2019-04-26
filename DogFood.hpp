@@ -121,6 +121,24 @@
 //
 #if defined(__linux__)
     #define _DOGFOOD_UDS_SUPPORT
+
+    //
+    //     Linux
+    //
+    #include <sys/types.h>
+    #define UDS_SEND_DATA(data,length,path) do {\
+            struct sockaddr_un client;\
+            int fd=socket(AF_UNIX, SOCK_DGRAM, 0);\
+            if (fd==-1)return false;\
+            client.sun_family = AF_UNIX;
+            std::strcpy(client.sun_path,path.c_str());\
+            int size=path.length()+sizeof(client.sun_family);\
+            struct sockaddr* addr= (struct sockaddr*)&client;\
+            bind(fd, addr, size);\
+            if(sendto(fd,data,length,0,addr,size)==-1)\
+            {close(fd);return false;}close(fd);\
+        } while (0)
+
 #endif
 
 ////////////////////////////////////////////////////////////////
