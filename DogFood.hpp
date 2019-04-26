@@ -175,20 +175,34 @@ Configuration
 Configure
 (
     const Mode& _mode,
-    const std::string& _path,
+    const std::string& _host,
     const int _port
 ) {
-    return std::make_tuple(_mode, _path, _port);
+    return std::make_tuple(_mode, _host, _port);
 }
 
-Configuration DefaultConfiguration()
+Configuration
+DefaultConfiguration()
 {
-    return std::make_tuple
-    (
+    return std::make_tuple(
         Mode::UDP,
         std::string(DOGSTATSD_HOST),
         static_cast<int>(DOGSTATSD_PORT)
     );
+}
+
+#if defined(_DOGFOOD_UDS_SUPPORT)
+Configuration
+UDS(const std::string& _path)
+{
+    return std::make_tuple(Mode::UDS, _path, -1);
+}
+#endif
+
+Configuration
+UDP(const std::string& _host, const int _port)
+{
+    return std::make_tuple(Mode::UDP, _host, _port);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1011,6 +1025,17 @@ _DOGFOOD_NOEXCEPT
 //        "Y8888P"    "Y8888   888  888   "Y88888             //
 //                                                            //
 ////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////
+// ValidatePort
+//
+//     - An unsigned 16 bit integer
+//
+inline bool ValidatePort(const int _port)
+{
+    return _port > 0 && _port <= 65535;
+}
+
 bool
 Send
 (
@@ -1023,6 +1048,9 @@ Send
 
     if (_mode == Mode::UDP)
     {
+        if (!ValidatePort(_port))
+            return false;
+
         UDP_SEND_DATAGRAM(
             _datagram.data(),
             _datagram.size(),
