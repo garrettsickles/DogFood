@@ -1,17 +1,17 @@
 # DogFood
-
-[(We Official)](https://docs.datadoghq.com/developers/libraries/)
+[(See us on DataDog's developer site)](https://docs.datadoghq.com/developers/libraries/)
 
 [![Build Status](https://travis-ci.org/garrettsickles/DogFood.svg?branch=master)](https://travis-ci.org/garrettsickles/DogFood)
 [![Build status](https://ci.appveyor.com/api/projects/status/x9e35p9nknds5p13/branch/master?svg=true)](https://ci.appveyor.com/project/garrettsickles/dogfood/branch/master)
 
 A C++ API for reporting DataDog metrics
 - Header Only
+- Stateless
 - Cross Platform
-- Communicate with **DogStatsD** agent over UDP
+- **UDP** and **UDS** (linux only) communication with **DogStatsD** agent
 
-## DataDog
-Running the barebones example program in `example/DogFood.example.cpp` produces the following:
+## Simple Example
+Running the barebones example program in [`example/simple_example.cpp`](example/simple_example.cpp) produces the following:
 
 ![DataDog Capture](https://github.com/garrettsickles/DogFood/blob/master/example/Example.PNG?raw=true)
 
@@ -20,26 +20,57 @@ This project is used for communicating with a **DataDog Agent**
 
 If you do not have a [DataDog Agent](https://docs.datadoghq.com/agent) installed, please install it and connect it to your account!
 ## Configuration
+
+### UDP - User Datagram Protocol (Custom)
+Configure DogFood to send metrics to a custom **host** and **port** over **UDP**
+
+Here is an example in [`example/simple_example_udp.cpp`](example/simple_example_udp.cpp)
 ```cpp
-////////////////////////////////////////////////////////////////
-// DogStatsD
-//
-//     Configuration for communicating with the DogStatsD agent
-//     Allow overriding the defaults by using `-D` compiler
-//     flag.
-//     
-//     Override the default port
-//         E.G. - g++ (...) -DDOGSTATSD_PORT=12345
-//
-//     Override the default host
-//         E.G. - g++ (...) -DDOGSTATSD_HOST="255.255.255.255"
-//
-#ifndef DOGSTATSD_HOST
-	#define DOGSTATSD_HOST "127.0.0.1"
-#endif
-#ifndef DOGSTATSD_PORT
-	#define DOGSTATSD_PORT 8125
-#endif
+DogFood::Send(DogFood::Metric(
+    "DogFood.MetricTest",
+    49.5555,
+    DogFood::Counter,
+    0.75,
+    DogFood::Tags({ { "f", "9" }, { "g", "8" } })
+), DogFood::UDP("127.0.0.1", 8125));
+```
+
+### UDS - Unix Domain Sockets (Custom)
+Configure DogFood to send metrics to a custom **host** and **port** over **UDP**
+
+Here is an example in [`example/simple_example_linux_uds.cpp`](example/simple_example_linux_uds.cpp)
+```cpp
+DogFood::Send(DogFood::Metric(
+    "DogFood.MetricTest",
+    49.5555,
+    DogFood::Counter,
+    0.75,
+    DogFood::Tags({ { "f", "9" }, { "g", "8" } })
+), DogFood::UDS("/var/run/datadog/dsd.socket"));
+```
+
+### UDP - User Datagram Protocol (At build time)
+Configure DogFood to send metrics to a custom **host** and **port** over **UDP**
+
+Here is an example in [`example/simple_example.cpp`](example/simple_example.cpp)
+```cpp
+// At compile time override the default host & default port
+//   (Please do not compile with 255.255.255.255)
+g++ (...) -DDOGSTATSD_HOST="255.255.255.255" -DDOGSTATSD_PORT=12345
+
+// At compile time in the source
+#define DOGSTATSD_HOST "127.0.0.1"
+#define DOGSTATSD_PORT 8125
+
+
+// By default will send over UDP to DOGSTATSD_HOST:DOGSTATSD_PORT
+DogFood::Send(DogFood::Metric(
+    "DogFood.MetricTest",
+    49.5555,
+    DogFood::Counter,
+    0.75,
+    DogFood::Tags({ { "f", "9" }, { "g", "8" } })
+));
 ```
 
 ## Example
@@ -61,33 +92,33 @@ int main()
         //    - Type of Counter
         //    - Sampled rate of 75%
         //    - Tags of f="9" and g="8"
-        DogFood::Metric(
+        DogFood::Send(DogFood::Metric(
             "DogFood.MetricTest",
             49.5555,
             DogFood::Counter,
             0.75,
-            DogFood::Tags({{"f", "9"}, {"g", "8"}})
-        );
+            DogFood::Tags({ { "f", "9" }, { "g", "8" } })
+        ));
         
         // Report an 'event'
         //    - Named "DogFood Event"
         //    - Message of "The event was invoked"
         //    - At a the current time
-        DogFood::Event(
+        DogFood::Send(DogFood::Event(
             "DogFood Event",
             "The event was invoked",
             time(NULL)
-        );
+        ));
         
         // Report a 'service_check'
         //    - Named "DogFood Service Check"
         //    - Level of Warning
         //    - At a the current time
-        DogFood::ServiceCheck(
+        DogFood::Send(DogFood::ServiceCheck(
             "DogFood Service Check",
             DogFood::Status::Warning,
             time(NULL)
-        );
+        ));
         
         // Sleep for 30 seconds
         std::this_thread::sleep_for(std::chrono::seconds(30));
@@ -176,7 +207,7 @@ enum Type {
     Set
 };
 
-bool Metric(
+std::string Metric(
     const std::string _name,
     const ValueType   _value,
     const Type        _type,
@@ -285,7 +316,7 @@ enum class Alert {
     Error
 };
 
-bool Event(
+std::string Event(
     const std::string _title,
     const std::string _text,
     const Numeric     _timestamp         = 0,
@@ -378,7 +409,7 @@ enum class Status {
 //
 //     Numeric should be an integral or floating-point type
 //
-bool ServiceCheck(
+std::string ServiceCheck(
     const std::string _name,
     const Status      _status,
     const Numeric     _timestamp = 0,
