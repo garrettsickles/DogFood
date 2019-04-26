@@ -130,7 +130,7 @@
             struct sockaddr_un client;\
             int fd=socket(AF_UNIX, SOCK_DGRAM, 0);\
             if (fd==-1)return false;\
-            client.sun_family = AF_UNIX;
+            client.sun_family = AF_UNIX;\
             std::strcpy(client.sun_path,path.c_str());\
             int size=path.length()+sizeof(client.sun_family);\
             struct sockaddr* addr= (struct sockaddr*)&client;\
