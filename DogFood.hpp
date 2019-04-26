@@ -125,14 +125,17 @@
     //
     //     Linux
     //
+    #include <sys/socket.h>
     #include <sys/types.h>
-    #define UDS_SEND_DATA(data,length,path) do {\
+    #include <sys/un.h> 
+    #define UDS_SEND_DATAGRAM(data,length,path) do {\
             struct sockaddr_un client;\
             int fd=socket(AF_UNIX, SOCK_DGRAM, 0);\
             if (fd==-1)return false;\
             client.sun_family = AF_UNIX;\
-            std::strcpy(client.sun_path,path.c_str());\
-            int size=path.length()+sizeof(client.sun_family);\
+            std::strcpy(client.sun_path,path);\
+            int size=std::strlen(path)+\
+                sizeof(client.sun_family);\
             struct sockaddr* addr= (struct sockaddr*)&client;\
             bind(fd, addr, size);\
             if(sendto(fd,data,length,0,addr,size)==-1)\
@@ -1079,7 +1082,11 @@ Send
     #if defined(_DOGFOOD_UDS_SUPPORT)
     else if (_mode == Mode::UDS)
     {
-
+        UDS_SEND_DATAGRAM(
+            _datagram.data(),
+            _datagram.size(),
+            _path.c_str()
+        );
     }
     #endif
 
