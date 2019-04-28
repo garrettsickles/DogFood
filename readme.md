@@ -49,6 +49,15 @@ DogFood::Send(DogFood::Metric(
 ), DogFood::UDS("/var/run/datadog/dsd.socket"));
 ```
 
+Note:
+1. Set datadog agent to use UDS
+    - In `/etc/datadog-agent/datadog.yaml`, set `dogstatsd_socket` to `/var/run/datadog/dsd.socket`
+        - e.g. - `dogstatsd_socket: /var/run/datadog/dsd.socket`
+2. Add permissions for dd-agent
+    - `$ mkdir /var/run/datadog/`
+    - `$ sudo chown dd-agent:dd-agent -R /var/run/datadog/`
+
+
 ### UDP - User Datagram Protocol (At build time)
 Configure DogFood to send metrics to a custom **host** and **port** over **UDP**
 
