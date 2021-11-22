@@ -253,8 +253,8 @@ using Tags = std::vector<std::pair<std::string, std::string>>;
 std::pair<std::string, std::string>
 Tag
 (
-    std::string key,
-    std::string value = ""
+    const std::string& key,
+    const std::string& value = ""
 ) {
     return std::make_pair(key, value);
 }
@@ -615,7 +615,7 @@ template<typename ValueType>
 typename MetricTypeAllowed<ValueType, std::string>::type
 Metric
 (
-    const std::string _name,
+    const std::string& _name,
     const ValueType   _value,
     const Type        _type,
     const double      _rate = 1.0,
@@ -807,15 +807,15 @@ typename std::enable_if<
     std::is_floating_point<Numeric>::value, std::string>::type
 Event
 (
-    const std::string _title,
-    const std::string _text,
-    const Numeric     _timestamp         = 0,
-    const std::string _hostname          = "",
-    const std::string _aggregation_key   = "",
-    const Priority    _priority          = Priority::Normal,
-    const std::string _source_type_name  = "",
-    const Alert       _alert_type        = Alert::Info,
-    const Tags&       _tags              = Tags()
+    const std::string& _title,
+    const std::string& _text,
+    const Numeric      _timestamp         = 0,
+    const std::string& _hostname          = "",
+    const std::string& _aggregation_key   = "",
+    const Priority     _priority          = Priority::Normal,
+    const std::string& _source_type_name  = "",
+    const Alert        _alert_type        = Alert::Info,
+    const Tags&        _tags              = Tags()
 )
 _DOGFOOD_NOEXCEPT
 {
@@ -970,12 +970,12 @@ typename std::enable_if<
     std::is_floating_point<Numeric>::value, std::string>::type
 ServiceCheck
 (
-    const std::string _name,
-    const Status      _status,
-    const Numeric     _timestamp = 0,
-    const std::string _hostname  = "",
-    const std::string _message   = "",
-    const Tags&       _tags      = Tags()
+    const std::string& _name,
+    const Status       _status,
+    const Numeric      _timestamp = 0,
+    const std::string& _hostname  = "",
+    const std::string& _message   = "",
+    const Tags&        _tags      = Tags()
 )
 _DOGFOOD_NOEXCEPT
 {
@@ -1060,8 +1060,8 @@ inline bool ValidatePort(const int _port)
 bool
 Send
 (
-    const std::string _datagram,
-    const Configuration _configuration = DefaultConfiguration()
+    const std::string&  _datagram,
+    const Configuration& _configuration = DefaultConfiguration()
 ) {
     Mode        _mode = std::get<0>(_configuration);
     std::string _path = std::get<1>(_configuration);
